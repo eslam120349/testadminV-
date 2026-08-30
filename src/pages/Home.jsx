@@ -6,7 +6,6 @@ import CropMarks from '../components/CropMarks.jsx'
 import Button from '../components/Button.jsx'
 import ServiceCard from '../components/ServiceCard.jsx'
 import ProjectCard from '../components/ProjectCard.jsx'
-import { services as defaultServices } from '../data/services.js'
 import { supabase } from '../lib/supabase.js'
 
 const whyItems = [
@@ -32,16 +31,77 @@ const whyItems = [
   },
 ]
 
-// Default client logos fallback
-const defaultClientLogos = [
-  { image_url: '/images/clients/egy fooz.png', alt_text: 'Egy Fooz' },
-  { image_url: '/images/clients/el tfl.png', alt_text: 'El Tfl' },
-  { image_url: '/images/clients/m3di gardns2.png', alt_text: 'Maadi Gardens' },
-  { image_url: '/images/clients/marina logo2.png', alt_text: 'Marina' },
-  { image_url: '/images/clients/el nassr.png', alt_text: 'El Nassr' },
-  { image_url: '/images/clients/ET_Logo.png', alt_text: 'ET' },
-  { image_url: '/images/clients/emaar-logo-png_seeklogo-305352.png', alt_text: 'Emaar' },
-  { image_url: '/images/clients/Gap-Symbol.png', alt_text: 'Gap' },
+// ==========================================
+// FALLBACK DATA
+// كل الأقسام اللي بتاخد من الداتابيز (Services،
+// Client Logos، Selected Projects) بتبدأ بالداتا
+// دي فورًا، وبتتستبدل بس لو Supabase رجّع نتيجة
+// فعلية. لو حصل error أو تأخير أو النت بطيء، الداتا
+// دي بتفضل ظاهرة زي ما هي من غير أي فراغ.
+// ==========================================
+
+const FALLBACK_SERVICES = [
+  {
+    number: '01',
+    title: 'printing and design solutions',
+    description:
+      'Large-format, offset and digital printing engineered for color accuracy and finish — from press check to final delivery.',
+    image:
+      'https://images.unsplash.com/photo-1626785774573-4b799315345d?q=80&w=1400&auto=format&fit=crop',
+  },
+  {
+    number: '02',
+    title: 'Branding & Identity',
+    description:
+      'Logo systems, guidelines and visual identities built to hold up across every surface a brand touches.',
+    image:
+      'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?q=80&w=1400&auto=format&fit=crop',
+  },
+  {
+    number: '03',
+    title: 'Exhibition & Events',
+    description:
+      'Custom stands, booths and event environments that turn a floor plan into a full brand experience.',
+    image:
+      'https://images.unsplash.com/photo-1540575467063-178a50c2df87?q=80&w=1400&auto=format&fit=crop',
+  },
+]
+
+const FALLBACK_CLIENT_LOGOS = [
+  '/images/clients/egy fooz.png',
+  '/images/clients/el tfl.png',
+  '/images/clients/m3di gardns2.png',
+  '/images/clients/marina logo2.png',
+  '/images/clients/el nassr.png',
+  '/images/clients/ET_Logo.png',
+  '/images/clients/emaar-logo-png_seeklogo-305352.png',
+  '/images/clients/Gap-Symbol.png',
+]
+
+// أول 3 بروجكتس، دلوقتي معرّفين هنا جوه الكود نفسه
+// بدل ما يتجابوا من ../data/projects.js
+const FALLBACK_FEATURED = [
+  {
+    id: 'nova-retail-branding',
+    title: 'Nova Retail Rebrand',
+    category: 'brand | design',
+    image:
+      'https://res.cloudinary.com/accom0gz/image/upload/v1787940188/WhatsApp_Image_2026-08-28_at_9.02.42_PM.jpg',
+  },
+  {
+    id: 'techexpo-booth',
+    title: 'TechExpo Exhibition Stand',
+    category: 'Exhibitions',
+    image:
+      'https://res.cloudinary.com/accom0gz/image/upload/v1787831756/ChatGPT_Image_Aug_26_2026_08_39_52_PM.png',
+  },
+  {
+    id: 'summit-conference',
+    title: 'Summit Conference Environment',
+    category: 'Exhibitions',
+    image:
+      'https://res.cloudinary.com/accom0gz/image/upload/v1787831767/ChatGPT_Image_Aug_26_2026_08_39_36_PM.png',
+  },
 ]
 
 export default function Home() {
@@ -50,73 +110,10 @@ export default function Home() {
   const sectionRef = useRef(null)
   const animationRef = useRef(null)
 
-  // =========================================
-  // PROJECTS FROM SUPABASE
-  // =========================================
-
-  const [projects, setProjects] = useState([])
-  const [projectsLoading, setProjectsLoading] = useState(true)
-
-  // =========================================
-  // DYNAMIC SERVICES & CLIENT LOGOS FROM SUPABASE
-  // =========================================
-
-  const [servicesList, setServicesList] = useState(defaultServices)
-  const [clientLogosList, setClientLogosList] = useState(defaultClientLogos)
-
-  useEffect(() => {
-    const fetchProjects = async () => {
-      const { data, error } = await supabase
-        .from('projects')
-        .select('id, title, category, image')
-        .order('created_at', { ascending: true })
-        .limit(3)
-
-      if (error) {
-        console.error('Supabase projects error:', error)
-        setProjects([])
-      } else {
-        setProjects(data || [])
-      }
-
-      setProjectsLoading(false)
-    }
-
-    const fetchServices = async () => {
-      const { data, error } = await supabase
-        .from('services')
-        .select('*')
-        .order('sort_order', { ascending: true })
-
-      if (!error && data && data.length > 0) {
-        setServicesList(data.map(s => ({
-          number: s.number,
-          title: s.title,
-          description: s.description,
-          image: s.image_url,
-        })))
-      }
-    }
-
-    const fetchClientLogos = async () => {
-      const { data, error } = await supabase
-        .from('client_logos')
-        .select('*')
-        .order('sort_order', { ascending: true })
-
-      if (!error && data && data.length > 0) {
-        setClientLogosList(data)
-      }
-    }
-
-    fetchProjects()
-    fetchServices()
-    fetchClientLogos()
-  }, [])
-
-  // =========================================
-  // HERO MOUSE LIGHT
-  // =========================================
+  // كل الـ state دي بتبدأ بالفولباك المحلي فورًا
+  const [services, setServices] = useState(FALLBACK_SERVICES)
+  const [clientLogos, setClientLogos] = useState(FALLBACK_CLIENT_LOGOS)
+  const [featured, setFeatured] = useState(FALLBACK_FEATURED)
 
   const handleHeroMouseMove = useCallback((e) => {
     if (animationRef.current) {
@@ -151,7 +148,113 @@ export default function Home() {
     }
   }, [])
 
-  const scopeRef = useReveal([])
+  // ==========================================
+  // LOAD SERVICES FROM SUPABASE
+  // ==========================================
+
+  useEffect(() => {
+    let mounted = true
+
+    async function loadServices() {
+      const { data, error } = await supabase
+        .from('services')
+        .select('id, number, title, description, image, created_at')
+        .order('created_at', { ascending: true })
+
+      if (!mounted) return
+
+      if (error) {
+        console.error('Error loading services:', error)
+        // سيبي الفولباك ظاهر
+        return
+      }
+
+      const servicesData = data || []
+
+      if (servicesData.length === 0) return
+
+      setServices(servicesData)
+    }
+
+    loadServices()
+
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  // ==========================================
+  // LOAD CLIENT LOGOS FROM SUPABASE
+  // ==========================================
+
+  useEffect(() => {
+    let mounted = true
+
+    async function loadClientLogos() {
+      const { data, error } = await supabase
+        .from('client_logos')
+        .select('id, image, created_at')
+        .order('created_at', { ascending: true })
+
+      if (!mounted) return
+
+      if (error) {
+        console.error('Error loading client logos:', error)
+        // سيبي الفولباك ظاهر
+        return
+      }
+
+      const logosData = data || []
+
+      if (logosData.length === 0) return
+
+      setClientLogos(logosData.map((l) => l.image))
+    }
+
+    loadClientLogos()
+
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  // ==========================================
+  // LOAD FEATURED PROJECTS FROM SUPABASE
+  // ==========================================
+
+  useEffect(() => {
+    let mounted = true
+
+    async function loadFeatured() {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('id, title, category, image, created_at')
+        .order('created_at', { ascending: true })
+        .limit(3)
+
+      if (!mounted) return
+
+      if (error) {
+        console.error('Error loading featured projects:', error)
+        // سيبي الفولباك ظاهر
+        return
+      }
+
+      const featuredData = data || []
+
+      if (featuredData.length === 0) return
+
+      setFeatured(featuredData)
+    }
+
+    loadFeatured()
+
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  const scopeRef = useReveal([services, clientLogos, featured])
 
   return (
     <div ref={scopeRef}>
@@ -168,11 +271,9 @@ export default function Home() {
         <CropMarks />
 
         {/* Mouse Lights */}
-
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
 
           {/* Light 1 */}
-
           <div
             ref={light1Ref}
             className="
@@ -194,7 +295,6 @@ export default function Home() {
           />
 
           {/* Light 2 */}
-
           <div
             ref={light2Ref}
             className="
@@ -214,11 +314,9 @@ export default function Home() {
               transition: 'left 0.08s ease-out, top 0.08s ease-out',
             }}
           />
-
         </div>
 
         {/* Hero Content */}
-
         <div className="container hero-grid relative z-10">
 
           <div className="hero-copy">
@@ -239,7 +337,6 @@ export default function Home() {
             </p>
 
             <div className="hero-actions">
-
               <Button to="/projects">
                 Explore Our Projects
               </Button>
@@ -247,13 +344,11 @@ export default function Home() {
               <Button to="/contact" variant="outline">
                 Contact Us
               </Button>
-
             </div>
 
           </div>
 
           {/* Hero Image */}
-
           <div className="hero-visual relative">
 
             <img
@@ -283,7 +378,6 @@ export default function Home() {
               </span>
 
               <span className="reg-mark" />
-
             </div>
 
           </div>
@@ -291,7 +385,6 @@ export default function Home() {
         </div>
 
         {/* Scroll */}
-
         <div
           className="
             hero-scroll
@@ -388,9 +481,9 @@ export default function Home() {
 
           <div className="services-grid">
 
-            {servicesList.map((s, i) => (
+            {services.map((s, i) => (
               <ServiceCard
-                key={s.number || i}
+                key={s.id ?? s.number}
                 {...s}
                 delayClass={`reveal-delay-${(i % 4) + 1}`}
               />
@@ -429,32 +522,18 @@ export default function Home() {
 
           <div className="featured-grid">
 
-            {projectsLoading ? (
-
-              <div className="col-span-full py-12 text-center">
-                <p className="text-mist">
-                  Loading projects...
-                </p>
-              </div>
-
-            ) : (
-
-              projects.map((p, i) => (
-
-                <Link
-                  key={p.id}
-                  to="/projects"
-                  style={{ display: 'block' }}
-                >
-                  <ProjectCard
-                    {...p}
-                    delayClass={`reveal-delay-${i + 1}`}
-                  />
-                </Link>
-
-              ))
-
-            )}
+            {featured.map((p, i) => (
+              <Link
+                key={p.id}
+                to="/projects"
+                style={{ display: 'block' }}
+              >
+                <ProjectCard
+                  {...p}
+                  delayClass={`reveal-delay-${i + 1}`}
+                />
+              </Link>
+            ))}
 
           </div>
 
@@ -574,15 +653,12 @@ export default function Home() {
 
       </section>
 
-
       {/* =====================================================
           CLIENT LOGOS MARQUEE
       ===================================================== */}
 
       <section className="relative overflow-hidden border-y border-white/10 pt-26 pb-36">
-
         {/* Heading */}
-
         <div className="container mb-10">
 
           <div className="text-center">
@@ -604,7 +680,6 @@ export default function Home() {
 
 
         {/* Fade Left */}
-
         <div
           className="
             pointer-events-none
@@ -622,7 +697,6 @@ export default function Home() {
 
 
         {/* Fade Right */}
-
         <div
           className="
             pointer-events-none
@@ -640,7 +714,6 @@ export default function Home() {
 
 
         {/* Marquee */}
-
         <div className="overflow-hidden">
 
           <div
@@ -653,8 +726,7 @@ export default function Home() {
           >
 
             {/* First Set */}
-
-            {clientLogosList.map((logo, index) => (
+            {clientLogos.map((logo, index) => (
 
               <div
                 key={`logo-first-${index}`}
@@ -670,8 +742,8 @@ export default function Home() {
               >
 
                 <img
-                  src={logo.image_url || logo}
-                  alt={logo.alt_text || "Client logo"}
+                  src={logo}
+                  alt="Client logo"
                   className="
                     max-h-14
                     max-w-[150px]
@@ -691,8 +763,7 @@ export default function Home() {
 
 
             {/* Duplicate Set */}
-
-            {clientLogosList.map((logo, index) => (
+            {clientLogos.map((logo, index) => (
 
               <div
                 key={`logo-second-${index}`}
@@ -708,8 +779,8 @@ export default function Home() {
               >
 
                 <img
-                  src={logo.image_url || logo}
-                  alt={logo.alt_text || "Client logo"}
+                  src={logo}
+                  alt="Client logo"
                   className="
                     max-h-14
                     max-w-[150px]
@@ -732,6 +803,7 @@ export default function Home() {
         </div>
 
       </section>
+
 
     </div>
   )

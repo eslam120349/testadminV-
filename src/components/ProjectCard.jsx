@@ -27,12 +27,10 @@ export default function ProjectCard({
 
       <div className="project-card-overlay">
         <span className="project-card-category">
-          {category}
           {category || 'Printing'}
         </span>
         <div className="project-card-row">
           <h3 className="project-card-title">
-            {title}
             {title || 'Project'}
           </h3>
           <ArrowUpRight

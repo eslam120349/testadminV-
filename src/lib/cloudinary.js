@@ -1,59 +1,95 @@
-import { supabase } from './supabase.js'
-
 /**
- * Uploads an image file to Cloudinary (with fallback to Supabase Storage).
- * @param {File} file - The file selected by the user
- * @param {string} folder - Destination folder name (e.g., 'services', 'projects', 'logos')
- * @returns {Promise<string>} Secure URL of the uploaded image
+ * Upload an image directly to Cloudinary.
+ *
+ * IMPORTANT:
+ * - No Supabase Storage fallback.
+ * - Uses an unsigned Cloudinary upload preset.
+ * - Never put the Cloudinary API Secret in frontend code.
  */
+
 export async function uploadImage(file, folder = 'easygroup') {
-  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || 'accom0gz'
-  const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || 'ml_default'
-  const apiKey = import.meta.env.VITE_CLOUDINARY_API_KEY
-
-  if (cloudName && uploadPreset) {
-    try {
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('upload_preset', uploadPreset)
-      formData.append('folder', folder)
-
-      if (apiKey) {
-        formData.append('api_key', apiKey)
-      }
-
-      const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
-        method: 'POST',
-        body: formData,
-      })
-
-      const data = await response.json()
-
-      if (response.ok && data.secure_url) {
-        return data.secure_url
-      }
-
-      console.warn('Cloudinary upload error:', data.error?.message)
-    } catch (err) {
-      console.warn('Cloudinary request failed, attempting fallback to Supabase Storage...', err)
-    }
+  if (!file) {
+    throw new Error('No image file selected.')
   }
 
-  // Fallback to Supabase Storage
-  const ext = file.name.split('.').pop()
-  const fileName = `${folder}/${Date.now()}.${ext}`
+  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
+  const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
 
-  const { data, error } = await supabase.storage
-    .from('uploads')
-    .upload(fileName, file)
-
-  if (error) {
-    throw new Error(error.message || 'Storage upload failed')
+  if (!cloudName) {
+    throw new Error(
+      'Missing VITE_CLOUDINARY_CLOUD_NAME environment variable.'
+    )
   }
 
-  const { data: urlData } = supabase.storage
-    .from('uploads')
-    .getPublicUrl(data.path)
+  if (!uploadPreset) {
+    throw new Error(
+      'Missing VITE_CLOUDINARY_UPLOAD_PRESET environment variable.'
+    )
+  }
 
-  return urlData.publicUrl
+  if (!file.type.startsWith('image/')) {
+    throw new Error('Please select a valid image file.')
+  }
+
+  // 5MB maximum
+  const MAX_FILE_SIZE = 5 * 1024 * 1024
+
+  if (file.size > MAX_FILE_SIZE) {
+    throw new Error('Image size must be less than 5MB.')
+  }
+
+  const formData = new FormData()
+
+  formData.append('file', file)
+  formData.append('upload_preset', uploadPreset)
+
+  // Cloudinary folder
+  formData.append('folder', folder)
+
+  const uploadUrl =
+    `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`
+
+  let response
+
+  try {
+    response = await fetch(uploadUrl, {
+      method: 'POST',
+      body: formData,
+    })
+  } catch (error) {
+    console.error('Cloudinary network error:', error)
+
+    throw new Error(
+      'Could not connect to Cloudinary. Please check your internet connection.'
+    )
+  }
+
+  let data
+
+  try {
+    data = await response.json()
+  } catch {
+    throw new Error(
+      'Cloudinary returned an invalid response.'
+    )
+  }
+
+  if (!response.ok) {
+    console.error('Cloudinary upload error:', data)
+
+    throw new Error(
+      data?.error?.message ||
+      'Cloudinary upload failed.'
+    )
+  }
+
+  if (!data.secure_url) {
+    console.error('Cloudinary response:', data)
+
+    throw new Error(
+      'Cloudinary uploaded the image but did not return a URL.'
+    )
+  }
+
+  return data.secure_url
 }
