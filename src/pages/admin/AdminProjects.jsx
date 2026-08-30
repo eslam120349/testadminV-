@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { Plus, Pencil, Trash2, Upload, X, FolderKanban } from 'lucide-react'
 import { supabase } from '../../lib/supabase.js'
 
+import { uploadImage } from '../../lib/cloudinary.js'
+
 export default function AdminProjects({ onToast }) {
   const [projects, setProjects] = useState([])
   const [loading, setLoading] = useState(true)
@@ -62,27 +64,16 @@ export default function AdminProjects({ onToast }) {
     if (!file) return
 
     setUploading(true)
-
-    const ext = file.name.split('.').pop()
-    const fileName = `projects/${Date.now()}.${ext}`
-
-    const { data, error } = await supabase.storage
-      .from('uploads')
-      .upload(fileName, file)
-
-    if (error) {
-      onToast?.('Failed to upload image', 'error')
+    try {
+      const url = await uploadImage(file, 'projects')
+      setForm(prev => ({ ...prev, image: url }))
+      setPreview(url)
+    } catch (err) {
+      console.error('Upload error:', err)
+      onToast?.(err.message || 'Failed to upload image', 'error')
+    } finally {
       setUploading(false)
-      return
     }
-
-    const { data: urlData } = supabase.storage
-      .from('uploads')
-      .getPublicUrl(data.path)
-
-    setForm(prev => ({ ...prev, image: urlData.publicUrl }))
-    setPreview(urlData.publicUrl)
-    setUploading(false)
   }
 
   const handleSubmit = async (e) => {
