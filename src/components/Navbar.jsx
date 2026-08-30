@@ -106,22 +106,27 @@ export default function Navbar() {
               {l.label}
             </NavLink>
           ))}
+          {isAdmin && (
+            <NavLink
+              to="/admin"
+              draggable="false"
+              className={({ isActive }) => `navbar-link text-red-500 font-semibold ${isActive ? 'is-active' : ''}`}
+            >
+              Admin Dashboard
+            </NavLink>
+          )}
         </nav>
 
         {/* AUTH BUTTONS / PROFILE */}
         <div className="navbar-cta flex items-center gap-3">
           {user ? (
             <div className="flex items-center gap-3">
-              {isAdmin && (
-                <Link to="/admin" className="btn btn-outline btn-sm flex items-center gap-1.5">
-                  <Shield size={14} className="text-red-500" />
-                  Admin
-                </Link>
-              )}
-
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-mono text-white/80">
-                <User size={13} className="text-red-400" />
-                <span className="max-w-[120px] truncate">{user.email}</span>
+              <div
+                className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/5 border border-white/10 text-sm font-medium text-white/90"
+                title={user.email}
+              >
+                <User size={15} className="text-red-500" />
+                <span className="max-w-[130px] truncate">{user.email?.split('@')[0] || 'Profile'}</span>
               </div>
 
               <button
@@ -169,17 +174,21 @@ export default function Navbar() {
             </NavLink>
           ))}
           {isAdmin && (
-            <Link to="/admin" className="navbar-mobile-link text-red-400">
+            <NavLink
+              to="/admin"
+              className={({ isActive }) => `navbar-mobile-link text-red-400 ${isActive ? 'is-active' : ''}`}
+            >
               Admin Dashboard
-            </Link>
+            </NavLink>
           )}
         </nav>
 
         <div className="flex flex-col gap-3 mt-6">
           {user ? (
             <div className="flex flex-col gap-3">
-              <div className="text-xs font-mono text-white/60 px-1">
-                Signed in as: <strong className="text-white">{user.email}</strong>
+              <div className="text-sm font-mono text-white/80 px-1 flex items-center gap-2">
+                <User size={16} className="text-red-400" />
+                <span>{user.email}</span>
               </div>
               <button
                 onClick={handleLogout}
